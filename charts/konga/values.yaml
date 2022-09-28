@@ -1,7 +1,3 @@
-# Default values for konga.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
 replicaCount: 1
 
 image:
@@ -16,30 +12,51 @@ service:
   type: ClusterIP
   port: 80
 
+# https://github.com/pantsel/konga#environment-variables
+config:
+  port:
+  node_env: development # needed to perform db migrations automatically on databases
+  ssl:
+    enabled: false
+    key_path: ""
+    crt_path: ""
+  konga_hook_timeout:
+  log_level: ""
+  token_secret: ""
 
-# Konga default configuration
-config: {}
-#   port: 1337
-#   node_env: development
-#   ssl_key_path:
-#   ssl_crt_path:
-#   konga_hook_timeout: 60000
-#   db_adapter: postgres
-#   db_uri:
-#   db_host: localhost
-#   db_port: 5432
-#   db_user:
-#   db_password:
-#   db_database: konga_database
-#   db_pg_schema: public
-#   log_level: debug
-#   token_secret:
-#   konga_node_data:
-#   konga_user_data:
+database:
+  enabled: false
+  adapter: postgres
+  uri:
+  host: localhost
+  port: 5432
+  ssl: false
+  database: konga_database
+  pg_schema: public
+  credentials:
+    from_secret: false # or secret name
+    username: username # value or secret key
+    password: password # value or secret key
 
-# LDAP configuration for Konga
+seed:
+  kong_nodes: []
+#    - name: Kong Test Seed
+#      type: default
+#      kong_admin_url: http://kong:8001
+#      health_checks: false
+#      active: true
+  users: []
+#    - username: myadmin
+#      email: myadmin@some.domain
+#      firstName: Peter
+#      lastName: Administrator
+#      node_id: http://kong:8001
+#      admin: true
+#      active: true
+#      password: somepassword
+
+# https://github.com/pantsel/konga/blob/master/docs/LDAP.md
 ldap: {}
-# ldap:
 #   auth_provider:
 #   host:
 #   bind_dn:
@@ -56,33 +73,25 @@ ldap: {}
 #   attr_lastname:
 #   attr_email:
 
-# Ingress Configuration for Konga
 ingress:
   enabled: false
   annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths: []
-
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-
+  # kubernetes.io/tls-acme: "true"
+  ingressClassName:
+  hostname: chart-example.local
+  path: /
+  tlsSecretName: ""
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   # limits:
   #   cpu: 100m
   #   memory: 128Mi
   # requests:
   #   cpu: 100m
-  #   memory: 128Mi
+#   memory: 128Mi
+
+extraVolumes: []
+extraVolumeMounts: []
 
 nodeSelector: {}
 

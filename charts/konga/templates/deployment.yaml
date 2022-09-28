@@ -20,16 +20,30 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       volumes:
-{{- if .Values.extraVolumes }}
-{{ toYaml .Values.extraVolumes | indent 8 }}
-{{- end }}
+        {{- if or (len .Values.seed.kong_nodes) (len .Values.seed.users) }}
+        - name: konga-seed
+          secret:
+            secretName: {{ include "konga.fullname" . }}-secret
+            items:
+              {{- if len .Values.seed.kong_nodes }}
+              - key: kong_node.data
+                path: kong_node.data
+              {{- end }}
+              {{- if len .Values.seed.users }}
+              - key: userdb.data
+                path: userdb.data
+              {{- end }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{ toYaml .Values.extraVolumes | nindent 8 }}
+        {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 1337
+              containerPort: {{ default 1337 .Values.config.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -42,12 +56,38 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "konga.fullname" . }}-config
+          env:
+            {{- if and .Values.database.enabled .Values.database.credentials.from_secret }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.database.credentials.username }}
+                  name: {{ .Values.database.credentials.from_secret }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.database.credentials.password }}
+                  name: {{ .Values.database.credentials.from_secret }}
+            {{- end }}
+            {{- if len .Values.seed.kong_nodes }}
+            - name: KONGA_SEED_KONG_NODE_DATA_SOURCE_FILE
+              value: /run/secrets/konga-seed/kong_node.data
+            {{- end }}
+            {{- if len .Values.seed.users }}
+            - name: KONGA_SEED_USER_DATA_SOURCE_FILE
+              value: /run/secrets/konga-seed/userdb.data
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-{{- if .Values.extraVolumeMounts }}
-{{ toYaml .Values.extraVolumeMounts | nindent 12 }}
-{{- end }}
+            {{- if or (len .Values.seed.kong_nodes) (len .Values.seed.users) }}
+            - name: konga-seed
+              mountPath: /run/secrets/konga-seed
+              readOnly: true
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
